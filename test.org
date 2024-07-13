@@ -1,0 +1,58 @@
+#+title: Todo
+
+* TODO Org-agenda webdav server
+
+Einen webserver der den Todo file served und ändert auf request, dann auch eine desktop deamon der den file im Blick behält und bei änderungen sie an den server sendet.
+
+Bonus: der server geht um 3. in der früh über die Liste, schreibt sich in einen History file die done task, Löscht sie aus dem File und updated die Tasks die in einem Loop sind wieder zu undone
+
+* NEXT Update Phone
+* TODO Informatik Olympiade website
+DEADLINE: <2024-07-13 Sat> SCHEDULE: <2024-07-12 Fri>
+
+* TODO Englisch, Mathebuch, Duolingo, Codeforce
+* Laptop abgeben
+* Tichu Karten in finished
+* DONE Brief abgeben
+
+
+* TODO Laptop zu werkstätte
+* TODO Ram für server bestellen
+* TODO Tichu arena
+* TODO Phsysologie plan
+* TODO Workbench
+* TODO VWA weiter schreiben
+* TODO Cabel und Plattenspieler upgraden
+* NEXT Achivements wall
+
+Competitions auf denen ich getanzt habe
+Menschen die ich zu Linux converted habe
+
+* NEXT [#C] Rust music app
+* NEXT [#C] Setup beamer with old laptop
+* LOOP Latein [0/1]
+
+- [ ] Anki
+
+* DONE LOOP Franzoesisch [1/1]
+DEADLINE: <2024-05-22 Wed .+ld>
+
+- [ ] Duolingo
+
+* Lesen
+** TODO [#C] Streching buch lesen
+** DONE [#C] Homage to Catalonia lesen
+
+
+** TODO Analysis
+
+- [ ] Buch lesen
+
+* How to
+** Timestamp
+
+SPC-m-d-t
+
+** Set priority
+
+SPC-m-p-p
