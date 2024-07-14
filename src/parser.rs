@@ -9,26 +9,31 @@ impl structs::Object {
         let mut obj_context: structs::Context = structs::Context::new();
         let mut result_obj = structs::Object::empty();
         for (number, (obj, string)) in context.lines.into_iter().enumerate() {
-            if number == 1 {
+            if number == 0 {
                 lowest_value = obj.value();
                 result_obj = structs::Object::new(obj);
             } else if obj.value() > lowest_value {
                 obj_context.add_context_line((obj, string));
             } else {
-                let temp_context = std::mem::take(&mut obj_context);
+                if number != 1 {
+                    let temp_context = std::mem::take(&mut obj_context);
                 result_obj.add_child(Object::parse(temp_context));
+                }                
                 lowest_value = obj.value();
+                obj_context.add_context_line((obj, string));
             }
         }
-
+        if !obj_context.lines.is_empty() {
+            result_obj.add_child(Object::parse(obj_context));
+        }
         return result_obj;
     }
 }
 
-impl structs::File {
+impl structs::Context {
     pub fn parse(&mut self, text: Vec<String>) {
         for line in text {
-            self.context.lines.push((parse_line(line.clone()), line));
+            self.lines.push((parse_line(line.clone()), line));
         }
     }
 }

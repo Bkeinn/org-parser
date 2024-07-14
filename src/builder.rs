@@ -17,3 +17,8 @@ pub fn build_value(value: u32, repeat: char, end: char) -> String {
         end
     );
 }
+
+// First String TODO, second string DONE
+// pub fn without_done(obj: &Object) -> (Vec<String>, Vec<String>) {
+//     if obj.children.is_empty()
+// }

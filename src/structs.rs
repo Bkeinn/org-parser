@@ -1,11 +1,13 @@
 use crate::{builder, parser::count_initial_repeats};
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use std::{default, u32::MAX};
+use clap::ValueEnum;
+
 
 /// Constructor funktions will allways require the whole Line, not just snipets
 use regex::{self, Regex, Replacer};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum FileContext {
     Todo,
 }
@@ -43,7 +45,23 @@ pub struct ParsedDateTime {
     pub day: String,
     pub repeat: Option<Repeat>,
 }
+/// Returns true when the date was changed, false if it was not changed
 impl ParsedDateTime {
+    fn update(&mut self) -> bool {
+        let tody = chrono::Utc::now().date_naive();
+        if self.date < tody {
+            if let Some(repeater) = self.repeat {
+                match repeater {
+                    Repeat::Dayly => self.date = self.date + Duration::days(1),
+                    Repeat::Weekly => self.date = self.date + Duration::weeks(1),
+                    Repeat::Monthly => self.date = self.date + Duration::days(30),// Months are now 30 days, fact, pull request if you have a better idea
+                    Repeat::Yearly => self.date = self.date + Duration::days(365),// Fuck Schaltjahre
+                }
+                return true;
+            }
+        }
+        return false;
+    }
     fn build(&self) -> String {
         let repeat = match &self.repeat {
             Some(rep) => format!(" .+l{}", rep.build()),
@@ -118,7 +136,7 @@ impl InfoType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TodoStates {
     TODO,
     DONE,
@@ -252,7 +270,7 @@ impl ObjectTypes {
                 todo,
                 checkbox,
                 value,
-            } => *value,
+            } => *value + 500,
             ObjectTypes::Heading {
                 text,
                 todo,
@@ -261,7 +279,7 @@ impl ObjectTypes {
                 value,
                 priority,
                 in_line_scedule,
-            } => *value,
+            } => *value + 100,
             ObjectTypes::File { context } => 0,
             _ => MAX,
         };
@@ -327,7 +345,7 @@ impl ObjectTypes {
                     }
                 );
             }
-            ObjectTypes::File { context } => format!("File context: {}", context.build());
+            ObjectTypes::File { context } => format!("File context: {}", context.build()),
         }
     }
     pub fn new_heading(input: &str) -> ObjectTypes {
@@ -423,7 +441,7 @@ pub struct File {
     pub context: Context,
     author: Option<String>,
     title: Option<String>,
-    children: Vec<Object>,
+    pub children: Vec<Object>,
 }
 
 impl File {
@@ -451,31 +469,23 @@ impl File {
             }
         }
     }
-    // pub fn add_children_from_context(&mut self) {
-    //     let mut lowest_value = u32::MAX;
-    //     let mut obj_context: Context = Context::new();
-    //     for (obj, string) in self.context.lines.into_iter() {
-    //         if obj.value() > lowest_value {
-    //             obj_context.add_context_line((obj, string));
-    //         } else {
-    //             let temp_context = std::mem::take(&mut obj_context);
-    //             self.children.push(Object::parse(temp_context));
-    //             lowest_value = obj.value();
-    //         }
-    //     }
-    // }
     pub fn add_children(&mut self, obj: Object) {
         self.children = obj.children;
     }
     pub fn print_children(&self) {
         println!("{:#?}", self.children);
     }
+    pub fn update_loop(&mut self) {
+        for child in &mut self.children {
+            child.update_loop();
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct Object {
-    object_type: ObjectTypes,
-    children: Vec<Object>,
+    pub object_type: ObjectTypes,
+    pub children: Vec<Object>,
 }
 
 impl Object {
@@ -491,6 +501,80 @@ impl Object {
     }
     pub fn add_child(&mut self, obj: Object) {
         self.children.push(obj);
+    }
+    pub fn build(&self) -> Vec<String> {
+        let mut vec = Vec::new();
+        vec.push(self.object_type.build());
+        vec.extend(self.children.iter().flat_map(|child| child.build()));
+        return vec;
+    }
+    ///First non filtered, Second filtered
+    pub fn build_seperate_todo(&self, todostate: &TodoStates, filtered_vec:&mut Vec<String> ) -> Vec<String> {
+        let mut std_vec = Vec::new();
+        match &self.object_type {
+            ObjectTypes::Heading { text, todo, deadline, scheduled, in_line_scedule, value, priority } => match todo {
+                Some(todo) if todo == todostate => {
+                        filtered_vec.extend(self.build());
+                        return Vec::new();
+                    }
+                _ => (),
+            }
+            _ => (),
+        }
+        std_vec.push(self.object_type.build());
+        std_vec.extend(self.children.iter().flat_map(|child| child.build_seperate_todo(todostate, filtered_vec)));
+        return std_vec;
+    }
+
+    pub fn update_loop(&mut self) {
+        match &mut self.object_type {
+            ObjectTypes::Heading { text, todo, deadline, scheduled, in_line_scedule, value, priority } => {
+                if let Some(todo) = todo {
+                    if todo == &TodoStates::LOOP {
+                        let mut did_update = false;
+                        let mut date_sepcified = false;
+                        self.update_date(&mut did_update, &mut date_sepcified);
+                    }
+                }
+            }
+            _ => (),
+        }
+        for child in &mut self.children {
+            child.update_loop();
+        }
+    }
+
+    fn update_date(&mut self, did_update: &mut bool, date_specified: &mut bool) {
+        for child in self.children.iter_mut() {
+            match &mut child.object_type {
+                ObjectTypes::INFO { info, text } => {
+                    *date_specified = true;
+                    for information in info {
+                        match information {
+                            InfoType::DEADLINE { date } => *did_update = date.update() | *did_update,
+                            InfoType::SCHEDULED { date } => *did_update = date.update() | *did_update,
+                        }
+                    }
+                }
+                ObjectTypes::ListElement { text, todo, checkbox, value } => {
+                    if !*date_specified || *did_update {
+                        if let Some(checkbox) = checkbox {
+                            *checkbox = false;
+                        }
+                    }
+                }
+                _ => (),
+            }
+            child.update_date(did_update, date_specified);
+        }
+        // match &mut self.object_type {
+        //     ObjectTypes::ListElement { text, todo, checkbox, value } => {
+        //         if let Some(checkbox) = checkbox {
+        //             *checkbox = *did_update | *checkbox;
+        //         }
+        //     }
+        //     _ => (),
+        // }
     }
 }
 impl Default for Object {

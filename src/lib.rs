@@ -22,21 +22,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn raw_parse_into_tree() {
+    fn raw_parse() {
         let file = File::open("todo.org").expect("No such file found");
         let buf = BufReader::new(file);
         let lines: Vec<String> = buf.lines().map(|l| l.expect("No Line")).collect();
 
-        let mut file = structs::File::new();
-        file.parse(lines);
-        println!("{:#?}", file.context);
+        let mut context = structs::Context::new();
+        context.parse(lines);
 
+        let mut file = structs::File::new();
+        file.context = context;
         for i in file.build_from_context() {
             println!("{i}");
         }
+        panic!("STOP");
+    }
+    #[test]
+        fn into_tree() {
+        let file = File::open("todo.org").expect("No such file found");
+        let buf = BufReader::new(file);
+        let lines: Vec<String> = buf.lines().map(|l| l.expect("No Line")).collect();
 
-        file.add_children(Object::parse(file.context));
+        let mut context = structs::Context::new();
+        context.parse(lines);
+        let mut file = structs::File::new();
+
+        file.add_children(Object::parse(context));
         file.print_children();
+        panic!("STOP");
     }
 
     #[test]
