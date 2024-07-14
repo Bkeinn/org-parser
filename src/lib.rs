@@ -1,6 +1,9 @@
 mod builder;
 mod parser;
 mod structs;
+mod object;
+mod object_types;
+mod time_management;
 
 //  let lines: Vec<String> = input.lines().map(|line| line.to_string()).collect();
 

@@ -1,34 +1,9 @@
 use regex::Regex;
 
-use crate::structs::{self, Context, Object, ObjectTypes};
+use crate::structs::{self};
+use crate::object_types::ObjectTypes;
+use crate::object::Object;
 
-impl structs::Object {
-    /// It is important to parse the text without the object_type
-    pub fn parse(context: structs::Context) -> structs::Object {
-        let mut lowest_value = u32::MAX;
-        let mut obj_context: structs::Context = structs::Context::new();
-        let mut result_obj = structs::Object::empty();
-        for (number, (obj, string)) in context.lines.into_iter().enumerate() {
-            if number == 0 {
-                lowest_value = obj.value();
-                result_obj = structs::Object::new(obj);
-            } else if obj.value() > lowest_value {
-                obj_context.add_context_line((obj, string));
-            } else {
-                if number != 1 {
-                    let temp_context = std::mem::take(&mut obj_context);
-                result_obj.add_child(Object::parse(temp_context));
-                }                
-                lowest_value = obj.value();
-                obj_context.add_context_line((obj, string));
-            }
-        }
-        if !obj_context.lines.is_empty() {
-            result_obj.add_child(Object::parse(obj_context));
-        }
-        return result_obj;
-    }
-}
 
 impl structs::Context {
     pub fn parse(&mut self, text: Vec<String>) {
@@ -38,27 +13,27 @@ impl structs::Context {
     }
 }
 
-fn parse_line(text: String) -> structs::ObjectTypes {
+fn parse_line(text: String) -> ObjectTypes {
     let re_heading = Regex::new(r"^\s*\*").unwrap();
     let re_list = Regex::new(r"^\s*-").unwrap();
     let re_comment = Regex::new(r"^\s*#").unwrap();
     let re_info = Regex::new(r"^\s*(SCHEDULED|DEADLINE|CLOSED)").unwrap();
     let re_empty = Regex::new(r"^\s*$").unwrap();
 
-    let mut object: structs::ObjectTypes = structs::ObjectTypes::EmptyLine;
+    let mut object: ObjectTypes = ObjectTypes::EmptyLine;
 
     if re_heading.is_match(&text) {
-        object = structs::ObjectTypes::new_heading(&text);
+        object = ObjectTypes::new_heading(&text);
     } else if re_list.is_match(&text) {
-        object = structs::ObjectTypes::new_list_element(&text);
+        object = ObjectTypes::new_list_element(&text);
     } else if re_comment.is_match(&text) {
-        object = structs::ObjectTypes::new_text(text);
+        object = ObjectTypes::new_text(text);
     } else if re_info.is_match(&text) {
-        object = structs::ObjectTypes::new_info(text);
+        object = ObjectTypes::new_info(text);
     } else if re_empty.is_match(&text) {
-        object = structs::ObjectTypes::new_empty();
+        object = ObjectTypes::new_empty();
     } else {
-        object = structs::ObjectTypes::new_text(text);
+        object = ObjectTypes::new_text(text);
     }
 
     return object;

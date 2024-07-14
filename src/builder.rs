@@ -1,4 +1,4 @@
-use crate::structs::{self, Context, Object, ObjectTypes};
+use crate::structs::{self, Context};
 
 impl structs::File {
     pub fn build_from_context(&mut self) -> Vec<String> {
